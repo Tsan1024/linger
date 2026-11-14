@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { MemoryScheduleConfig } from "../../src/memory/config.js";
 import { PersonalKnowledgeGraphNotFoundError } from "../../src/memory/graph-visualization.js";
 import { MemoryScheduler } from "../../src/memory/scheduler.js";
+import { startHttpHost } from "../../src/http-host.js";
 import { startMemoryServer } from "../../src/memory/server.js";
 
 const roots: string[] = [];
@@ -25,6 +26,39 @@ afterEach(async () => {
 });
 
 describe("Memory server", () => {
+  it("tracks model readiness and unmounts without closing the shared listener", async () => {
+    const dataRoot = await fs.mkdtemp(path.join(os.tmpdir(), "memory-server-"));
+    roots.push(dataRoot);
+    const http = await startHttpHost({ host: "127.0.0.1", port: 0 });
+    let ready = false;
+    try {
+      const server = await startMemoryServer({
+        dataRoot,
+        http,
+        readiness: () =>
+          ready
+            ? { ready: true }
+            : { ready: false, reason: "model_call_unavailable" },
+        scheduler: new MemoryScheduler(schedule, async () => undefined),
+        serviceToken: "memory-token",
+      });
+      http.finishStartup();
+      expect((await fetch(`${http.url}/healthz`)).status).toBe(200);
+      expect((await fetch(`${http.url}/readyz`)).status).toBe(503);
+      ready = true;
+      expect((await fetch(`${http.url}/readyz`)).status).toBe(200);
+      ready = false;
+      expect((await fetch(`${http.url}/readyz`)).status).toBe(503);
+      await server.close();
+      expect((await fetch(`${http.url}/readyz`)).status).toBe(200);
+      expect(
+        (await fetch(`${http.url}/internal/v1/memory/entries`)).status,
+      ).toBe(404);
+    } finally {
+      await http.close();
+    }
+  });
+
   it("lists and reads only authenticated Memory entries through the internal API", async () => {
     const dataRoot = await fs.mkdtemp(path.join(os.tmpdir(), "memory-server-"));
     roots.push(dataRoot);

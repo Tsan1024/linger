@@ -2,6 +2,7 @@ import {
   readBodyWithLimit,
   startHttpHost,
   type HttpHost,
+  type RoleReadiness,
 } from "../http-host.js";
 import { withTeamHubTrace } from "./teamhub-transport.js";
 import crypto from "node:crypto";
@@ -51,6 +52,7 @@ import { writeMemoryLog } from "./run-telemetry.js";
 export async function startMemoryServer(options: {
   /** The process listener shared with the other roles. */
   http?: HttpHost;
+  readiness?: () => RoleReadiness | Promise<RoleReadiness>;
   /** Without `http`, the server starts its own listener here. */
   host?: string;
   dataRoot: string;
@@ -406,13 +408,15 @@ export async function startMemoryServer(options: {
         port: options.port ?? 0,
       });
   const http = options.http ?? ownedHost!;
-  http.mount({
+  const unmount = http.mount({
+    readiness: options.readiness,
     prefixes: ["/internal/v1/"],
     fetch: (request) => app.fetch(request),
   });
   ownedHost?.finishStartup();
   return {
     close: async () => {
+      unmount();
       await ownedHost?.close();
     },
     url: http.url,

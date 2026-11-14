@@ -135,6 +135,10 @@ export async function startMemoryService({
   scheduler.start();
   const server = await startMemoryServer({
     dataRoot: config.dataRoot,
+    readiness: () =>
+      modelCall()
+        ? { ready: true }
+        : { ready: false, reason: "model_call_unavailable" },
     http,
     scheduler,
     serviceToken: config.serviceToken,
