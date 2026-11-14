@@ -19,7 +19,9 @@
   replaces the global `Request`/`Response`. The `voice` role supervises separate ASR, recorder and Live child processes (ports 4324–4326); it does not run audio jobs on the main thread. Voice workers follow TeamHub's effective provider keys (`GET /internal/v1/voice/provider-keys` with the `voice-runtime` credential): a Soniox key runs ASR and recorder, an xAI key runs Live. The role reconciles at startup, on TeamHub's `POST /v1/voice/workers:reconcile` (`node-services-internal` bearer), and every 60 seconds, so workers start, drain, or restart with a new key without restarting node-services. The reconcile route answers `{ready}` only after every wanted worker's health port reports it registered with LiveKit, or after 20 seconds, so TeamHub answers a key save once a voice session can be dispatched. Keys reach a worker only through its environment; a failed key fetch leaves the running workers unchanged. Other roles run on the main thread
   and must not install process globals.
 - `NODE_SERVICES_ROLES` selects roles as a comma-separated list. An unset or
-  empty value starts every role; an unknown role fails startup. Selected roles
+  empty value starts every role; an unknown role fails startup. Selecting
+  `memory` or `llm-wiki` requires `agent` in the same process; invalid
+  combinations fail before opening listeners or starting background work. Selected roles
   always start in the order `memory`, `llm-wiki`, `agent`, `voice`, `document`. Shutdown starts media draining immediately while other roles stop in reverse. The shared listener starts only when an HTTP role is selected.
 - `src/main.ts` is the only process entrypoint. It owns SIGINT/SIGTERM through
   `src/process-lifecycle.ts`: the first signal aborts startup or starts

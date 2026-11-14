@@ -120,6 +120,15 @@ export function selectRoles(value: string | undefined): RoleName[] {
         `expected ${all.join(", ")}`,
     );
   }
+  const dependentRoles = ["memory", "llm-wiki"].filter((name) =>
+    names.includes(name),
+  );
+  if (dependentRoles.length > 0 && !names.includes("agent")) {
+    throw new Error(
+      `NODE_SERVICES_ROLES requires agent when selecting ${dependentRoles.join(", ")}: ` +
+        "model calls are provided by the agent role in the same process",
+    );
+  }
   // Selected roles keep the host's start order.
   return all.filter((name) => names.includes(name));
 }
