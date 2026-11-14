@@ -30,6 +30,10 @@ describe("Memory server", () => {
     const dataRoot = await fs.mkdtemp(path.join(os.tmpdir(), "memory-server-"));
     roots.push(dataRoot);
     const http = await startHttpHost({ host: "127.0.0.1", port: 0 });
+    http.mount({
+      prefixes: ["/v1/"],
+      fetch: () => new Response("agent"),
+    });
     let ready = false;
     try {
       const server = await startMemoryServer({
@@ -50,10 +54,25 @@ describe("Memory server", () => {
       ready = false;
       expect((await fetch(`${http.url}/readyz`)).status).toBe(503);
       await server.close();
+      await server.close();
+      expect(await (await fetch(`${http.url}/v1/status`)).text()).toBe("agent");
       expect((await fetch(`${http.url}/readyz`)).status).toBe(200);
       expect(
         (await fetch(`${http.url}/internal/v1/memory/entries`)).status,
       ).toBe(404);
+      const replacement = await startMemoryServer({
+        dataRoot,
+        http,
+        scheduler: new MemoryScheduler(schedule, async () => undefined),
+        serviceToken: "memory-token",
+      });
+      try {
+        expect(
+          (await fetch(`${http.url}/internal/v1/memory/entries`)).status,
+        ).toBe(401);
+      } finally {
+        await replacement.close();
+      }
     } finally {
       await http.close();
     }

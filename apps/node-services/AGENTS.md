@@ -13,8 +13,8 @@
   and `/internal/v1/wiki-refreshes/`; the longest prefix wins. Prefixes must
   not collide. The host alone answers `/healthz` (process alive), `/startupz`
   (every selected role started), and `/readyz` (started and every mounted
-  role's readiness ok); roles must not register their own probes. Memory readiness follows the
-  availability of the in-process Agent model-call provider. Stopping Memory
+  role's readiness ok); roles must not register their own probes. Memory
+  readiness follows the availability of the in-process Agent model-call provider. Stopping Memory
   unmounts its routes and readiness check without closing the shared listener.
 - The `document` role keeps its own port (4321 by default) on its own worker
   thread (`src/document/main.ts`) because it installs jsdom globals and
