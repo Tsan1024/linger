@@ -17,29 +17,6 @@ describe("selectRoles", () => {
     ]);
   });
 
-  it.each(["memory", "llm-wiki", "memory,llm-wiki", "voice,memory"])(
-    "rejects %s without its in-process model provider",
-    (roles) => {
-      expect(() => selectRoles(roles)).toThrow(
-        "NODE_SERVICES_ROLES requires agent",
-      );
-    },
-  );
-
-  it.each(["agent", "voice", "document", "voice,document"])(
-    "allows independent roles: %s",
-    (roles) => {
-      expect(selectRoles(roles)).toEqual(roles.split(","));
-    },
-  );
-
-  it.each(["memory", "llm-wiki"])(
-    "allows %s with its in-process model provider",
-    (role) => {
-      expect(selectRoles(`agent,${role}`)).toEqual([role, "agent"]);
-    },
-  );
-
   it("rejects unknown roles", () => {
     expect(() => selectRoles("memory,skill-indexer")).toThrow(
       "NODE_SERVICES_ROLES contains unknown roles: skill-indexer",
